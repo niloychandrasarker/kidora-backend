@@ -1,17 +1,29 @@
-# ===== Build Stage =====
-FROM maven:3.9.6-eclipse-temurin-21 AS build
-WORKDIR /app
-COPY pom.xml ./
-COPY .mvn .mvn
-RUN mvn -q -DskipTests dependency:go-offline
-COPY src ./src
-RUN mvn -q clean package -DskipTests
+# Stage 1: Build the app
+FROM eclipse-temurin:21-jdk AS build
 
-# ===== Run Stage =====
-FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-# Copy the built jar (adjust pattern if final name differs)
-COPY --from=build /app/target/*-SNAPSHOT.jar app.jar
+
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+COPY src ./src
+
+# Build the jar without running tests
+RUN ./mvnw clean package -DskipTests
+
+# Stage 2: Use slim JRE for running
+FROM eclipse-temurin:21-jre-jammy
+
+WORKDIR /app
+
+# Copy the jar from the build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Expose the port
 EXPOSE 8080
-ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75"
-ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
+
+# Set environment variables for optimization
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
+ENV SPRING_PROFILES_ACTIVE=prod
+
+# Run the application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
