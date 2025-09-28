@@ -2,6 +2,7 @@ package com.kidora.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -12,11 +13,12 @@ import org.springframework.stereotype.Service;
 public class EmailService {
     
     private final JavaMailSender javaMailSender;
-    
+	@Value("${spring.mail.form-mail}")
+	private String formMail;
     public void sendOtpEmail(String toEmail, String otp, String purpose) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("noreply@kidora.com");
+            message.setFrom(formMail);
             message.setTo(toEmail);
             message.setSubject("Kidora - OTP Verification");
             
